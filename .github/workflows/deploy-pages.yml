@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -23,14 +23,76 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Build final V20 site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          python3 - <<'PY'
+          import base64
+          import gzip
+          import re
+          import urllib.request
+          from pathlib import Path
+
+          commit = "47028fa06b762c14ce2b5803bcf9e1f808e35d3c"
+          base = f"https://raw.githubusercontent.com/Aditya6205/Wildcraft-AI-Sales-OS/{commit}/payload"
+          recovered = []
+
+          for i in range(11):
+              name = f"part-{i:03d}.txt"
+              url = f"{base}/{name}"
+              with urllib.request.urlopen(url, timeout=60) as response:
+                  raw = response.read()
+
+              text = raw.decode("utf-8").strip()
+              out = []
+              for ch in text:
+                  code = ord(ch)
+                  if code <= 0x7F:
+                      out.append(ch)
+                  else:
+                      hi = (code >> 8) & 0xFF
+                      lo = code & 0xFF
+                      if hi:
+                          out.append(chr(hi))
+                      if lo:
+                          out.append(chr(lo))
+
+              clean = re.sub(r"[^A-Za-z0-9+/=]", "", "".join(out))
+              if not clean:
+                  raise RuntimeError(f"Recovered payload is empty: {name}")
+              recovered.append(clean)
+
+          encoded = "".join(recovered)
+          compressed = base64.b64decode(encoded, validate=True)
+          html = gzip.decompress(compressed).decode("utf-8")
+
+          # Prevent the later executive enhancer from creating a second copy of
+          # the already-rendered Revenue Signals and Causal Chain blocks.
+          old_causal = "const main=$('.exec-brief-main');\n      if(main&&!$('#v18CausalChain')){"
+          new_causal = "const main=$('.exec-brief-main');\n      const existingCausal=main?.querySelector('.v18-causal-chain');\n      if(existingCausal&&!existingCausal.id)existingCausal.id='v18CausalChain';\n      if(main&&!$('#v18CausalChain')){"
+          html = html.replace(old_causal, new_causal)
+
+          old_signals = "const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){"
+          new_signals = "const existingSignals=$('.v18-revenue-signals');\n      if(existingSignals&&!existingSignals.id)existingSignals.id='v18RevenueSignals';\n      const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){"
+          html = html.replace(old_signals, new_signals)
+
+          Path("_site/index.html").write_text(html, encoding="utf-8")
+          Path("_site/.nojekyll").write_text("", encoding="utf-8")
+          print(f"Built final site: {len(html):,} characters")
+          print("Browser-side Base64 loader removed from deployment.")
+          PY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Upload artifact
+
+      - name: Upload final site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-# Deployment retriggered after enabling GitHub Pages source.
