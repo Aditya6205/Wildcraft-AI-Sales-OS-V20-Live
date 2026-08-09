@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Wildcraft AI Sales OS V20 — executive command center, AI Copilot, Regional Intelligence and India Revenue Intelligence.">
+  <title>Wildcraft AI Sales OS — V20 Live</title>
+  <style>
+    html,body{height:100%;margin:0;background:#090a0c;color:#f7f7f4;font:14px/1.5 Inter,"Segoe UI",system-ui,sans-serif}
+    .loading{height:100%;display:grid;place-items:center}.box{text-align:center;padding:28px;max-width:520px}.ring{width:42px;height:42px;margin:0 auto 16px;border:3px solid #252a33;border-top-color:#f37022;border-radius:50%;animation:s .9s linear infinite}.box strong{font-size:18px}.box p{color:#9da3ad;margin:8px 0 0}@keyframes s{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="loading"><div class="box"><div class="ring"></div><strong>Wildcraft AI Sales OS V20</strong><p>Loading Regional Intelligence, India Revenue Map and Decision Copilot…</p></div></div>
+  <script>
+  (async()=>{try{
+    if(!('DecompressionStream' in window)) throw new Error('Please use the latest Chrome, Edge, Firefox, or Safari.');
+    const PAYLOAD_COMMIT='47028fa06b762c14ce2b5803bcf9e1f808e35d3c';
+    const base=`https://raw.githubusercontent.com/Aditya6205/Wildcraft-AI-Sales-OS/${PAYLOAD_COMMIT}/payload`;
+    const count=11,parts=[];
+    for(let i=0;i<count;i++){
+      const n=String(i).padStart(3,'0');
+      const response=await fetch(`${base}/part-${n}.txt`);
+      if(!response.ok) throw new Error(`Unable to load application package ${n}`);
+      parts.push((await response.text()).trim());
+    }
+    const binary=atob(parts.join(''));
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    let html=await new Response(stream).text();
+
+    // V20 duplicate-render correction: adopt the existing V20 signal/causal blocks
+    // before the later executive enhancer initializes, rather than creating a second copy.
+    html=html.replace(
+      "const main=$('.exec-brief-main');\n      if(main&&!$('#v18CausalChain')){",
+      "const main=$('.exec-brief-main');\n      const existingCausal=main?.querySelector('.v18-causal-chain');\n      if(existingCausal&&!existingCausal.id)existingCausal.id='v18CausalChain';\n      if(main&&!$('#v18CausalChain')){"
+    );
+    html=html.replace(
+      "const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){",
+      "const existingSignals=$('.v18-revenue-signals');\n      if(existingSignals&&!existingSignals.id)existingSignals.id='v18RevenueSignals';\n      const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){"
+    );
+
+    document.open();document.write(html);document.close();
+  }catch(error){
+    document.body.innerHTML=`<div class="loading"><div class="box"><h2>Unable to load the dashboard</h2><p>${String(error.message||error)}</p></div></div>`;
+    console.error(error);
+  }})();
+  </script>
+</body>
+</html>
