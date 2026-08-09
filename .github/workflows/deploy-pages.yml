@@ -3,6 +3,8 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths:
+      - "v20-site.html.xz"
   workflow_dispatch:
 
 permissions:
@@ -24,66 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build final V20 site
+      - name: Build final V20 site from local package
         shell: bash
         run: |
           set -euo pipefail
+          test -f v20-site.html.xz || { echo "Missing v20-site.html.xz"; exit 1; }
+          echo "e9d3a6250e42bcbce573551790b0b39e6becca5b0b03d992e146e5ef3be65a28  v20-site.html.xz" | sha256sum -c -
           mkdir -p _site
-          python3 - <<'PY'
-          import base64
-          import gzip
-          import re
-          import urllib.request
-          from pathlib import Path
-
-          commit = "47028fa06b762c14ce2b5803bcf9e1f808e35d3c"
-          base = f"https://raw.githubusercontent.com/Aditya6205/Wildcraft-AI-Sales-OS/{commit}/payload"
-          recovered = []
-
-          for i in range(11):
-              name = f"part-{i:03d}.txt"
-              url = f"{base}/{name}"
-              with urllib.request.urlopen(url, timeout=60) as response:
-                  raw = response.read()
-
-              text = raw.decode("utf-8").strip()
-              out = []
-              for ch in text:
-                  code = ord(ch)
-                  if code <= 0x7F:
-                      out.append(ch)
-                  else:
-                      hi = (code >> 8) & 0xFF
-                      lo = code & 0xFF
-                      if hi:
-                          out.append(chr(hi))
-                      if lo:
-                          out.append(chr(lo))
-
-              clean = re.sub(r"[^A-Za-z0-9+/=]", "", "".join(out))
-              if not clean:
-                  raise RuntimeError(f"Recovered payload is empty: {name}")
-              recovered.append(clean)
-
-          encoded = "".join(recovered)
-          compressed = base64.b64decode(encoded, validate=True)
-          html = gzip.decompress(compressed).decode("utf-8")
-
-          # Prevent the later executive enhancer from creating a second copy of
-          # the already-rendered Revenue Signals and Causal Chain blocks.
-          old_causal = "const main=$('.exec-brief-main');\n      if(main&&!$('#v18CausalChain')){"
-          new_causal = "const main=$('.exec-brief-main');\n      const existingCausal=main?.querySelector('.v18-causal-chain');\n      if(existingCausal&&!existingCausal.id)existingCausal.id='v18CausalChain';\n      if(main&&!$('#v18CausalChain')){"
-          html = html.replace(old_causal, new_causal)
-
-          old_signals = "const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){"
-          new_signals = "const existingSignals=$('.v18-revenue-signals');\n      if(existingSignals&&!existingSignals.id)existingSignals.id='v18RevenueSignals';\n      const legend=$('.exec-chart-legend');\n      if(legend&&!$('#v18RevenueSignals')){"
-          html = html.replace(old_signals, new_signals)
-
-          Path("_site/index.html").write_text(html, encoding="utf-8")
-          Path("_site/.nojekyll").write_text("", encoding="utf-8")
-          print(f"Built final site: {len(html):,} characters")
-          print("Browser-side Base64 loader removed from deployment.")
-          PY
+          xz -dc v20-site.html.xz > _site/index.html
+          echo "84ec113c10c440878c84f7f9a4719046bbf5596fb9f4868e0e80e692712d6c28  _site/index.html" | sha256sum -c -
+          touch _site/.nojekyll
+          echo "Final V20 site built successfully."
+          wc -c _site/index.html
+          if grep -q "Failed to execute 'atob'" _site/index.html; then
+            echo "Unexpected old loader error text found" >&2
+            exit 1
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
